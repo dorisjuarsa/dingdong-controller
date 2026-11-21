@@ -1,6 +1,6 @@
-# TOMBOL DINGDONG - 10 Button Arcade Controller & Custom Casing
+# TOMBOL DINGDONG - Arcade Controller & Custom Casing
 
-Proyek kontroler 10 tombol dingdong/arcade berbasis **Arduino Nano** dengan firmware responsif dan file desain **3D Casing** siap cetak.
+Proyek kontroler tombol dingdong/arcade berbasis **Arduino Nano** dengan firmware responsif dan file desain **3D Casing** siap cetak.
 
 ---
 
@@ -8,35 +8,35 @@ Proyek kontroler 10 tombol dingdong/arcade berbasis **Arduino Nano** dengan firm
 
 ```text
 TOMBOL_DINGDONG/
-├── 3d_casing/                     # File desain dan cetak 3D Casing
-│   ├── FreeCAD/                   # File master 3D CAD (.FCStd)
+├── 3d_casing/                          # File desain dan cetak 3D Casing
+│   ├── FreeCAD/                        # File master 3D CAD (.FCStd)
 │   │   ├── CASING_NANO_ASSEMBLY.FCStd
 │   │   ├── CASING_NANO_ATAS.FCStd
 │   │   └── CASING_NANO_BAWAH.FCStd
-│   ├── STL/                       # File mesh siap cetak 3D Printer (.stl)
+│   ├── STL/                            # File mesh siap cetak 3D Printer (.stl)
 │   │   ├── CASING_NANO_ATAS.stl
 │   │   ├── CASING_NANO_BAWAH.stl
-│   │   └── original/              # Backup model STL versi awal
+│   │   └── original/                   # Backup model STL versi awal
 │   │       ├── CASING_NANO_ATAS_ORIGINAL.stl
 │   │       └── CASING_NANO_BAWAH_ORIGINAL.stl
-│   ├── STEP/                      # Format universal CAD (.step)
+│   ├── STEP/                           # Format universal CAD (.step)
 │   │   ├── CASING_NANO_ATAS.step
 │   │   └── CASING_NANO_BAWAH.step
-│   └── generate_casing.py         # Script Python generator FreeCAD
-├── TOMBOL_DINGDONG_CODE/          # Firmware Arduino Nano
-│   └── TOMBOL_DINGDONG_CODE.ino
-├── .gitignore                     # Filter file temporary / backup
-└── README.md                      # Dokumentasi proyek
+│   └── generate_casing.py              # Script Python generator FreeCAD
+├── digital_dingdong_controller/        # Firmware Arduino Nano (Versi Digital)
+│   └── digital_dingdong_controller.ino
+├── .gitignore                          # Filter file temporary / backup
+└── README.md                           # Dokumentasi proyek
 ```
 
 ---
 
-## ⚡ Fitur Firmware (Arduino Nano)
+## ⚡ Fitur Firmware (`digital_dingdong_controller`)
 
 * **Debounce Non-Blocking (20 ms):** Menggunakan `millis()` independen di setiap pin untuk menyaring getaran mekanik microswitch arcade (*anti double-click*).
 * **Mode Cepat (10 ms / 100 Hz):** Mengirimkan data secara halus dan ultra-responsif ke PC saat ada tombol yang ditekan atau ditahan.
 * **Keep-Alive / Heartbeat Otomatis (1000 ms):** Jika mesin tidak disentuh lebih dari 3 detik (*idle*), interval pengiriman otomatis melambat menjadi 1 detik sekali agar tidak membebani port serial komputer.
-* **Format Data Langsung + Enter:** Mengirimkan 10 karakter status tombol murni dari byte pertama (sesuai urutan pin) dan diakhiri karakter Enter (`\r\n`).
+* **Format Data Aman (XOR Checksum + Enter):** Mengirimkan 10 karakter status tombol murni dari byte pertama, separator `*`, 2 digit Hex XOR checksum untuk validasi data, dan diakhiri karakter Enter (`\r\n`).
 * **Active-LOW:** Menggunakan resistor internal `INPUT_PULLUP` Arduino (kaki tombol cukup disambung ke Pin Arduino dan GND).
 
 ---
@@ -45,33 +45,36 @@ TOMBOL_DINGDONG/
 
 | Byte ke- | Pin Arduino Nano | Logika Aktif | Status |
 | :---: | :---: | :---: | :---: |
-| 1 | **A0** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
-| 2 | **A1** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
+| 1 | **A4** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
+| 2 | **A3** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
 | 3 | **A2** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
-| 4 | **A3** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
-| 5 | **A4** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
+| 4 | **A1** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
+| 5 | **A0** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
 | 6 | **D9** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
 | 7 | **D8** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
 | 8 | **D7** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
 | 9 | **D6** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
 | 10 | **D5** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
-| 11 & 12 | **Enter** | `\r\n` (CR + LF) | Akhiran paket |
+| 11 | **`*`** | Pembatas | Separator Checksum |
+| 12 & 13 | **Checksum** | HEX (2 digit) | Hasil XOR ke-10 karakter tombol |
+| 14 & 15 | **Enter** | `\r\n` (CR + LF) | Akhiran paket |
 
 ---
 
 ## 📡 Protokol Serial
 
 * **Baudrate:** `115200 bps`
+* **Format Paket:** `[10 Status Tombol]*[Checksum 2 Digit HEX]\r\n`
 * **Contoh Data Diterima di Komputer:**
-  * Semua tombol lepas: `0000000000\r\n`
-  * Tombol 1 (A0) ditekan: `1000000000\r\n`
-  * Tombol 10 (D5) ditekan: `0000000001\r\n`
+  * Semua tombol lepas: `0000000000*30\r\n`
+  * Tombol 1 (A4) ditekan: `1000000000*31\r\n`
+  * Tombol 10 (D5) ditekan: `0000000001*31\r\n`
 
 ---
 
 ## 🛠️ Panduan Upload Arduino Nano
 
-1. Buka file `TOMBOL_DINGDONG_CODE/TOMBOL_DINGDONG_CODE.ino` di Arduino IDE.
+1. Buka file `digital_dingdong_controller/digital_dingdong_controller.ino` di Arduino IDE.
 2. Pilih Board: **Tools $\rightarrow$ Board $\rightarrow$ Arduino AVR Boards $\rightarrow$ Arduino Nano**.
 3. Pilih Processor: **Tools $\rightarrow$ Processor $\rightarrow$ ATmega328P (Old Bootloader)** *(khusus Nano clone/CH340)*.
 4. Pilih Port COM yang sesuai.

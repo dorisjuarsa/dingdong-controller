@@ -1,16 +1,15 @@
 
 /*
- * ARDUINO NANO - 10 BUTTON CONTROLLER
+ * DIGITAL DINGDONG CONTROLLER (10 BUTTONS) - ARDUINO NANO
  *
  * Protocol:
- * 10 ASCII STATUS (urutan sesuai buttonPins) + ENTER (CR+LF)
+ * 10 ASCII STATUS + '*' + XOR CHECKSUM (2 HEX) + ENTER (CR+LF)
  *
- * Contoh: 0000000000\r\n
- * Byte 1  : buttonPins[0] (A0)
- * Byte 2  : buttonPins[1] (A1)
- * ...
- * Byte 10 : buttonPins[9] (5)
- * Akhiran : Enter (\r\n)
+ * Contoh: 0000000000*30\r\n
+ * Byte 1..10 : Status 10 tombol sesuai buttonPins
+ * Byte 11    : Separator '*'
+ * Byte 12..13: Checksum (2 digit HEX hasil XOR dari 10 status tombol)
+ * Byte 14..15: Enter (\r\n)
  *
  * Baudrate     : 115200
  * Debounce     : 20 ms
@@ -174,14 +173,46 @@ void updatePayload() {
 }
 
 // =====================================
+// XOR CHECKSUM (SEDERHANA)
+// =====================================
+
+byte calculateChecksum() {
+
+  byte checksum = 0;
+
+  for (byte i = 0; i < BUTTON_COUNT; i++) {
+
+    checksum ^= (byte)payload[i];
+  }
+
+  return checksum;
+}
+
+// =====================================
 // SEND PACKET
 // =====================================
 
 void sendPacket() {
 
-  // Kirim langsung 10 byte status sesuai urutan buttonPins mulai dari byte
-  // pertama + Enter (CRLF)
-  Serial.println(payload);
+  byte checksum = calculateChecksum();
+
+  const char hexDigits[] = "0123456789ABCDEF";
+
+  char hexHigh = hexDigits[(checksum >> 4) & 0x0F];
+  char hexLow  = hexDigits[checksum & 0x0F];
+
+  // 1. 10 status tombol (mulai dari byte pertama sesuai urutan buttonPins)
+  Serial.print(payload);
+
+  // 2. Separator '*'
+  Serial.print('*');
+
+  // 3. Checksum (2 digit HEX)
+  Serial.print(hexHigh);
+  Serial.print(hexLow);
+
+  // 4. Akhiran Enter (CR + LF)
+  Serial.println();
 
   lastSendTime = millis();
 }
