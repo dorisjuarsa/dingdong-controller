@@ -36,7 +36,7 @@ TOMBOL_DINGDONG/
 * **Debounce Non-Blocking (20 ms):** Menggunakan `millis()` independen di setiap pin untuk menyaring getaran mekanik microswitch arcade (*anti double-click*).
 * **Mode Cepat (10 ms / 100 Hz):** Mengirimkan data secara halus dan ultra-responsif ke PC saat ada tombol yang ditekan atau ditahan.
 * **Keep-Alive / Heartbeat Otomatis (1000 ms):** Jika mesin tidak disentuh lebih dari 3 detik (*idle*), interval pengiriman otomatis melambat menjadi 1 detik sekali agar tidak membebani port serial komputer.
-* **Format Data Aman (XOR Checksum + Enter):** Mengirimkan 10 karakter status tombol murni dari byte pertama, separator `*`, 2 digit Hex XOR checksum untuk validasi data, dan diakhiri karakter Enter (`\r\n`).
+* **Format Data Aman (CRC-8 Checksum + Enter):** Mengirimkan 10 karakter status tombol murni dari byte pertama, separator `*`, 2 digit Hex CRC-8 checksum untuk validasi data presisi per tombol, dan diakhiri karakter Enter (`\r\n`).
 * **Active-LOW:** Menggunakan resistor internal `INPUT_PULLUP` Arduino (kaki tombol cukup disambung ke Pin Arduino dan GND).
 
 ---
@@ -56,7 +56,7 @@ TOMBOL_DINGDONG/
 | 9 | **D6** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
 | 10 | **D5** | LOW (ke GND) | `'1'` (tekan) / `'0'` (lepas) |
 | 11 | **`*`** | Pembatas | Separator Checksum |
-| 12 & 13 | **Checksum** | HEX (2 digit) | Hasil XOR ke-10 karakter tombol |
+| 12 & 13 | **Checksum** | HEX (2 digit) | Hasil CRC-8 dari 10 karakter status tombol |
 | 14 & 15 | **Enter** | `\r\n` (CR + LF) | Akhiran paket |
 
 ---
@@ -66,9 +66,10 @@ TOMBOL_DINGDONG/
 * **Baudrate:** `115200 bps`
 * **Format Paket:** `[10 Status Tombol]*[Checksum 2 Digit HEX]\r\n`
 * **Contoh Data Diterima di Komputer:**
-  * Semua tombol lepas: `0000000000*30\r\n`
-  * Tombol 1 (A4) ditekan: `1000000000*31\r\n`
-  * Tombol 10 (D5) ditekan: `0000000001*31\r\n`
+  * Semua tombol lepas: `0000000000*C0\r\n`
+  * Tombol 1 (A4) ditekan: `1000000000*A8\r\n`
+  * Tombol 2 (A3) ditekan: `0100000000*B9\r\n`
+  * Tombol 10 (D5) ditekan: `0000000001*C7\r\n`
 
 ---
 

@@ -3,12 +3,12 @@
  * DIGITAL DINGDONG CONTROLLER (10 BUTTONS) - ARDUINO NANO
  *
  * Protocol:
- * 10 ASCII STATUS + '*' + XOR CHECKSUM (2 HEX) + ENTER (CR+LF)
+ * 10 ASCII STATUS + '*' + CRC-8 CHECKSUM (2 HEX) + ENTER (CR+LF)
  *
- * Contoh: 0000000000*30\r\n
+ * Contoh: 0000000000*C0\r\n
  * Byte 1..10 : Status 10 tombol sesuai buttonPins
  * Byte 11    : Separator '*'
- * Byte 12..13: Checksum (2 digit HEX hasil XOR dari 10 status tombol)
+ * Byte 12..13: Checksum CRC-8 (2 digit HEX)
  * Byte 14..15: Enter (\r\n)
  *
  * Baudrate     : 115200
@@ -173,19 +173,31 @@ void updatePayload() {
 }
 
 // =====================================
-// XOR CHECKSUM (SEDERHANA)
+// CRC-8 CHECKSUM
 // =====================================
 
 byte calculateChecksum() {
 
-  byte checksum = 0;
+  byte crc = 0x00;
 
   for (byte i = 0; i < BUTTON_COUNT; i++) {
 
-    checksum ^= (byte)payload[i];
+    crc ^= (byte)payload[i];
+
+    for (byte b = 0; b < 8; b++) {
+
+      if (crc & 0x80) {
+
+        crc = (crc << 1) ^ 0x07;
+
+      } else {
+
+        crc <<= 1;
+      }
+    }
   }
 
-  return checksum;
+  return crc;
 }
 
 // =====================================
