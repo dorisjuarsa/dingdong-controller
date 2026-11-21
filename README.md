@@ -73,6 +73,139 @@ TOMBOL_DINGDONG/
 
 ---
 
+## 💻 Panduan Ekstraksi & Validasi Checksum (Sisi Host/PC)
+
+Untuk memastikan data yang diterima tidak korup akibat gangguan kabel USB atau noise, aplikasi di PC/komputer penerima harus:
+1. Membaca data per baris sampai menemukan karakter `\r\n` (*Enter*).
+2. Memisahkan string menggunakan tanda pemisah `*`.
+   * Bagian depan (10 karakter): **Payload status tombol**.
+   * Bagian belakang (2 karakter): **Checksum yang diterima**.
+3. Menghitung ulang **CRC-8** dari 10 karakter payload (menggunakan Polinomial `0x07`).
+4. Jika **Checksum Hitung == Checksum Diterima**, maka data **valid** dan status tombol aman untuk diproses.
+
+---
+
+### Contoh Implementasi 1: Python
+
+Cocok jika Anda membuat game dengan Pygame, emulator, atau script virtual controller (vJoy / keyboard emulator):
+
+```python
+import serial
+
+def calculate_crc8(payload: str) -> str:
+    """Menghitung CRC-8 dengan Polinomial 0x07"""
+    crc = 0x00
+    for char in payload:
+        crc ^= ord(char)
+        for _ in range(8):
+            if crc & 0x80:
+                crc = ((crc << 1) ^ 0x07) & 0xFF
+            else:
+                crc = (crc << 1) & 0xFF
+    return f"{crc:02X}"
+
+def parse_packet(raw_line: str):
+    """
+    Ekstraksi dan validasi paket serial dari Arduino
+    Format: '0000000000*C0'
+    """
+    clean_line = raw_line.strip()  # Buang \r\n
+    if "*" not in clean_line:
+        return None
+
+    # Pisahkan payload dan checksum
+    parts = clean_line.split("*")
+    if len(parts) != 2:
+        return None
+
+    payload, received_crc = parts[0], parts[1].upper()
+
+    # Validasi panjang payload (10 tombol)
+    if len(payload) != 10:
+        return None
+
+    # Verifikasi Checksum
+    computed_crc = calculate_crc8(payload)
+    if computed_crc == received_crc:
+        # Data Valid! Ubah string '1'/'0' menjadi array boolean/integer
+        button_states = [char == '1' for char in payload]
+        return button_states
+    else:
+        print(f"[Warning] Checksum mismatch! Diterima: {received_crc}, Dihitung: {computed_crc}")
+        return None
+
+# Contoh Penggunaan Membaca Port Serial:
+if __name__ == "__main__":
+    # Ganti 'COM3' (Windows) atau '/dev/ttyUSB0' (Linux) sesuai port Arduino Anda
+    ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
+    print("Mendengarkan data serial dari Dingdong Controller...")
+
+    while True:
+        try:
+            line = ser.readline().decode('utf-8', errors='ignore')
+            if line:
+                buttons = parse_packet(line)
+                if buttons is not None:
+                    # buttons adalah list berisi 10 boolean: [True/False, ...]
+                    print(f"Status Tombol: {buttons}")
+                    if buttons[0]: # Tombol 1 (A4)
+                        print(">> Tombol 1 Aktif!")
+        except KeyboardInterrupt:
+            ser.close()
+            break
+```
+
+---
+
+### Contoh Implementasi 2: Node.js / JavaScript
+
+Cocok untuk game berbasis web, Electron, atau Node.js serialport:
+
+```javascript
+// Fungsi kalkulasi CRC-8 (Polinomial 0x07)
+function calculateCRC8(payload) {
+  let crc = 0x00;
+  for (let i = 0; i < payload.length; i++) {
+    crc ^= payload.charCodeAt(i);
+    for (let b = 0; b < 8; b++) {
+      if (crc & 0x80) {
+        crc = ((crc << 1) ^ 0x07) & 0xff;
+      } else {
+        crc = (crc << 1) & 0xff;
+      }
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(2, '0');
+}
+
+// Fungsi Parsing Paket
+function parsePacket(line) {
+  const cleanLine = line.trim();
+  const [payload, receivedCrc] = cleanLine.split('*');
+
+  if (!payload || !receivedCrc || payload.length !== 10) {
+    return null; // Format tidak sesuai
+  }
+
+  const computedCrc = calculateCRC8(payload);
+  if (computedCrc === receivedCrc.toUpperCase()) {
+    // Valid! Mengembalikan status 10 tombol dalam bentuk array boolean
+    return payload.split('').map(ch => ch === '1');
+  } else {
+    console.warn(`Checksum Corrupt! Diterima: ${receivedCrc}, Dihitung: ${computedCrc}`);
+    return null;
+  }
+}
+
+// Contoh Pengujian:
+const sample = "1000000000*A8";
+const buttons = parsePacket(sample);
+console.log("Hasil Validasi:", buttons);
+// Output: [ true, false, false, false, false, false, false, false, false, false ]
+```
+
+---
+
 ## 🛠️ Panduan Upload Arduino Nano
 
 1. Buka file `digital_dingdong_controller/digital_dingdong_controller.ino` di Arduino IDE.
