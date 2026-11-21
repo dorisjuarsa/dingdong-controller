@@ -1,0 +1,27 @@
+# FreeCAD backup files
+*.FCBak
+*.fcbak
+*.FCStd1
+*.FCStd2
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+ENV/
+
+# Arduino & Editors
+build/
+*.hex
+*.elf
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS specific
+.DS_Store
+Thumbs.db
