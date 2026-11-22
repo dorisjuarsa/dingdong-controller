@@ -24,6 +24,13 @@
 
 #define BUTTON_COUNT 10
 
+// =====================================
+// MODE PENGIRIMAN
+// =====================================
+// 1 = MODE_SERIAL_RAW    (Format: 10 status + '*' + CRC-8 + interval 10ms + heartbeat 1s)
+// 2 = MODE_KEYBOARD_MODE (Format: Hanya kirim saat tombol ditekan/dilepas untuk bridge Keyboard)
+byte currentMode = 2;
+
 #define DEBOUNCE_MS 20
 #define SEND_INTERVAL_MS 10
 #define RELEASE_HOLD_MS 3000
@@ -118,43 +125,47 @@ void loop() {
     }
   }
 
-  // Ada perubahan status tombol
+  // =====================================
+  // PENGIRIMAN DATA
+  // =====================================
+
+  // 1. Kirim seketika saat ada perubahan tombol (Berlaku untuk Mode 1 & 2)
   if (stateChanged) {
 
     updatePayload();
 
     lastActivityTime = now;
 
-    // Kirim langsung
     sendPacket();
   }
 
-  // Periksa apakah ada tombol aktif
-  anyButtonPressed = false;
+  // 2. Pengiriman periodik (HANYA AKTIF DI MODE 1: SERIAL RAW)
+  // Pada Mode 2 (Keyboard Mode), pengiriman periodik dimatikan agar tidak spamming/flooding
+  if (currentMode == 1) {
 
-  for (byte i = 0; i < BUTTON_COUNT; i++) {
+    anyButtonPressed = false;
 
-    if (buttonState[i]) {
+    for (byte i = 0; i < BUTTON_COUNT; i++) {
 
-      anyButtonPressed = true;
+      if (buttonState[i]) {
 
-      break;
+        anyButtonPressed = true;
+
+        break;
+      }
     }
-  }
 
-  // Pengiriman periodik (Interval dinamis menggunakan millis, tanpa delay)
-  unsigned long currentInterval;
+    unsigned long currentInterval;
 
-  if (anyButtonPressed || (now - lastActivityTime < RELEASE_HOLD_MS)) {
-    currentInterval = SEND_INTERVAL_MS; // Mode cepat (10 ms) saat tombol
-                                        // ditekan atau baru dilepas
-  } else {
-    currentInterval = IDLE_INTERVAL_MS; // Mode lambat/standby (1000 ms / 1
-                                        // detik) saat tidak ada aktivitas
-  }
+    if (anyButtonPressed || (now - lastActivityTime < RELEASE_HOLD_MS)) {
+      currentInterval = SEND_INTERVAL_MS; // Cepat (10 ms)
+    } else {
+      currentInterval = IDLE_INTERVAL_MS; // Standby (1 detik)
+    }
 
-  if (now - lastSendTime >= currentInterval) {
-    sendPacket();
+    if (now - lastSendTime >= currentInterval) {
+      sendPacket();
+    }
   }
 }
 
