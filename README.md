@@ -23,8 +23,10 @@ TOMBOL_DINGDONG/
 │   │   ├── CASING_NANO_ATAS.step
 │   │   └── CASING_NANO_BAWAH.step
 │   └── generate_casing.py              # Script Python generator FreeCAD
-├── digital_dingdong_controller/        # Firmware Arduino Nano (Versi Digital)
+├── digital_dingdong_controller/        # Firmware Arduino Nano (10 Tombol Dingdong)
 │   └── digital_dingdong_controller.ino
+├── esp32_keyboard_bridge/              # Firmware ESP32 Bridge (UART -> USB/BLE Keyboard)
+│   └── esp32_keyboard_bridge.ino
 ├── .gitignore                          # Filter file temporary / backup
 └── README.md                           # Dokumentasi proyek
 ```
@@ -33,11 +35,13 @@ TOMBOL_DINGDONG/
 
 ## ⚡ Fitur Firmware (`digital_dingdong_controller`)
 
+* **2 Mode Pengiriman (Dapat Dipilih):**
+  * **Mode 2 (Default - `MODE_EVENT_DRIVEN`):** Mode hening. Hanya mengirim data 1 baris seketika saat ada tombol yang **ditekan** atau **dilepas**. Saat menganggur / ditahan, Arduino diam total (zero spam / hemat resource).
+  * **Mode 1 (`MODE_SERIAL_RAW`):** Mode streaming berkala. Mengirim cepat tiap 10 ms saat tombol aktif, dan melambat ke 500 ms (detak jantung / *heartbeat*) saat menganggur.
 * **Debounce Non-Blocking (20 ms):** Menggunakan `millis()` independen di setiap pin untuk menyaring getaran mekanik microswitch arcade (*anti double-click*).
-* **Mode Cepat (10 ms / 100 Hz):** Mengirimkan data secara halus dan ultra-responsif ke PC saat ada tombol yang ditekan atau ditahan.
-* **Keep-Alive / Heartbeat Otomatis (1000 ms):** Jika mesin tidak disentuh lebih dari 3 detik (*idle*), interval pengiriman otomatis melambat menjadi 1 detik sekali agar tidak membebani port serial komputer.
 * **Format Data Aman (CRC-8 Checksum + Enter):** Mengirimkan 10 karakter status tombol murni dari byte pertama, separator `*`, 2 digit Hex CRC-8 checksum untuk validasi data presisi per tombol, dan diakhiri karakter Enter (`\r\n`).
 * **Active-LOW:** Menggunakan resistor internal `INPUT_PULLUP` Arduino (kaki tombol cukup disambung ke Pin Arduino dan GND).
+* **Kompatibilitas Game:** Protokol dan urutan pin ini kompatibel langsung secara native dengan game arcade HTML5/Electron (seperti *Witch's Ritual Arcade / booth-withces*).
 
 ---
 
@@ -213,6 +217,22 @@ console.log("Hasil Validasi:", buttons);
 3. Pilih Processor: **Tools $\rightarrow$ Processor $\rightarrow$ ATmega328P (Old Bootloader)** *(khusus Nano clone/CH340)*.
 4. Pilih Port COM yang sesuai.
 5. Klik **Upload**.
+
+---
+
+## 🎮 Opsi Jembatan ESP32 (Keyboard Mode)
+
+Jika kontroler ini ingin dipakai untuk emulator atau game PC yang **hanya menerima input Keyboard biasa** (tanpa membongkar wiring pada Arduino Nano):
+
+1. Buka file `esp32_keyboard_bridge/esp32_keyboard_bridge.ino` di Arduino IDE.
+2. Pilih mode output di baris atas kodingan:
+   * `#define MODE_BLUETOOTH` : Untuk ESP32 WROOM biasa (menjadi **Bluetooth Wireless Keyboard** tanpa kabel ke PC).
+   * `#define MODE_USB_NATIVE` : Untuk ESP32-S2 / ESP32-S3 (menjadi **USB Keyboard kabel** langsung ke PC).
+3. Sambungkan 3 kabel dari Arduino Nano ke ESP32:
+   * **Nano Pin D1 (TX)** $\rightarrow$ **ESP32 Pin GPIO 16 (RX2)**
+   * **Nano Pin GND** $\rightarrow$ **ESP32 Pin GND**
+   * **Nano Pin 5V** $\rightarrow$ **ESP32 Pin VIN / 5V**
+4. Kontroler akan langsung dikenali oleh Windows/Linux/Mac sebagai Keyboard multi-tekan (simultan).
 
 ---
 
