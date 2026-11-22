@@ -27,14 +27,14 @@
 // =====================================
 // MODE PENGIRIMAN
 // =====================================
-// 1 = MODE_SERIAL_RAW    (Format: 10 status + '*' + CRC-8 + interval 10ms + heartbeat 500ms)
-// 2 = MODE_KEYBOARD_MODE (Format: Hanya kirim saat tombol ditekan/dilepas untuk bridge Keyboard)
-byte currentMode = 1;
+// 1 = MODE_SERIAL_RAW    (Format: interval 10ms + heartbeat 500ms + CRC-8)
+// 2 = MODE_EVENT_DRIVEN  (Format hening: Hanya kirim saat tombol ditekan/dilepas)
+byte currentMode = 2;
 
 #define DEBOUNCE_MS 20
 #define SEND_INTERVAL_MS 10
 #define RELEASE_HOLD_MS 3000
-#define IDLE_INTERVAL_MS 500 // Interval pengiriman saat menganggur (500 ms / 0.5 detik)
+#define IDLE_INTERVAL_MS 500 // Interval pengiriman saat menganggur (Mode 1)
 
 // Urutan tombol
 const byte buttonPins[BUTTON_COUNT] = {A4, A3, A2, A1, A0, 9, 8, 7, 6, 5};
@@ -140,7 +140,8 @@ void loop() {
   }
 
   // 2. Pengiriman periodik (HANYA AKTIF DI MODE 1: SERIAL RAW)
-  // Pada Mode 2 (Keyboard Mode), pengiriman periodik dimatikan agar tidak spamming/flooding
+  // Pada Mode 2 (Keyboard Mode), pengiriman periodik dimatikan agar tidak
+  // spamming/flooding
   if (currentMode == 1) {
 
     anyButtonPressed = false;
@@ -222,7 +223,7 @@ void sendPacket() {
   const char hexDigits[] = "0123456789ABCDEF";
 
   char hexHigh = hexDigits[(checksum >> 4) & 0x0F];
-  char hexLow  = hexDigits[checksum & 0x0F];
+  char hexLow = hexDigits[checksum & 0x0F];
 
   // 1. 10 status tombol (mulai dari byte pertama sesuai urutan buttonPins)
   Serial.print(payload);
