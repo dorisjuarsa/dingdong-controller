@@ -15,7 +15,7 @@
  * Debounce     : 20 ms
  * Send rate    : 10 ms (saat aktif)
  * Release hold : 3000 ms
- * Idle rate    : 1000 ms (saat tidak ada aktivitas)
+ * Idle rate    : 500 ms (saat tidak ada aktivitas)
  *
  * Button status:
  * 1 = Pressed
@@ -27,14 +27,14 @@
 // =====================================
 // MODE PENGIRIMAN
 // =====================================
-// 1 = MODE_SERIAL_RAW    (Format: 10 status + '*' + CRC-8 + interval 10ms + heartbeat 1s)
+// 1 = MODE_SERIAL_RAW    (Format: 10 status + '*' + CRC-8 + interval 10ms + heartbeat 500ms)
 // 2 = MODE_KEYBOARD_MODE (Format: Hanya kirim saat tombol ditekan/dilepas untuk bridge Keyboard)
-byte currentMode = 2;
+byte currentMode = 1;
 
 #define DEBOUNCE_MS 20
 #define SEND_INTERVAL_MS 10
 #define RELEASE_HOLD_MS 3000
-#define IDLE_INTERVAL_MS 1000 // Interval pengiriman saat menganggur (1 detik)
+#define IDLE_INTERVAL_MS 500 // Interval pengiriman saat menganggur (500 ms / 0.5 detik)
 
 // Urutan tombol
 const byte buttonPins[BUTTON_COUNT] = {A4, A3, A2, A1, A0, 9, 8, 7, 6, 5};
